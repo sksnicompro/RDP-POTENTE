@@ -9,44 +9,34 @@ jobs:
     timeout-minutes: 3600
 
     steps:
-      - name: Install VNC Server
+      - name: Configure Core RDP Settings
         run: |
           sudo apt-get update
-          sudo apt-get install -y tightvncserver xfce4 xfce4-terminal dbus-x11
+          sudo apt-get install -y xrdp xfce4 xfce4-terminal dbus-x11
 
       - name: Create RDP User with Secure Password
         run: |
           PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9!@#$%' | head -c 16)
           
-          sudo useradd -m -s /bin/bash rdp || true
+          sudo useradd -m -s /bin/bash rdp 2>/dev/null || true
           echo "rdp:$PASSWORD" | sudo chpasswd
-          sudo usermod -aG sudo rdp
+          sudo usermod -aG sudo rdp 2>/dev/null || true
           
-          echo "RDP_CREDS=User: rdp | Password: $PASSWORD" >> $GITHUB_ENV
           echo "RDP_PASSWORD=$PASSWORD" >> $GITHUB_ENV
 
-      - name: Configure VNC Server
+      - name: Configure XRDP Server
         run: |
-          sudo mkdir -p /home/rdp/.vnc
-          sudo chown rdp:rdp /home/rdp/.vnc
+          sudo systemctl start xrdp
+          sudo systemctl enable xrdp
           
-          echo "${{ env.RDP_PASSWORD }}" | vncpasswd -f > /tmp/passwd
-          sudo mv /tmp/passwd /home/rdp/.vnc/passwd
-          sudo chown rdp:rdp /home/rdp/.vnc/passwd
-          sudo chmod 600 /home/rdp/.vnc/passwd
-          
-          sudo tee /home/rdp/.vnc/xstartup > /dev/null <<EOF
-          #!/bin/bash
-          xrdb $HOME/.Xresources
-          startxfce4 &
-          EOF
-          
-          sudo chown rdp:rdp /home/rdp/.vnc/xstartup
-          sudo chmod +x /home/rdp/.vnc/xstartup
+          echo "xfce4-session" > ~/.xsession
+          sudo mkdir -p /home/rdp/.config/xfce4/xfconf/xfce-perchannel-xml
+          sudo chown -R rdp:rdp /home/rdp/.config
 
-      - name: Start VNC Server
+      - name: Open RDP Port
         run: |
-          sudo -u rdp tightvncserver :1 -geometry 768x768 -depth 32
+          sudo ufw allow 3389/tcp 2>/dev/null || true
+          sudo iptables -A INPUT -p tcp --dport 3389 -j ACCEPT 2>/dev/null || true
 
       - name: Install Tailscale
         run: |
@@ -73,27 +63,29 @@ jobs:
           
           echo "TAILSCALE_IP=$TS_IP" >> $GITHUB_ENV
 
-      - name: Verify VNC Accessibility
+      - name: Verify RDP Accessibility
         run: |
           echo "Tailscale IP: ${{ env.TAILSCALE_IP }}"
           
-          if sudo netstat -tulpn | grep :5901 || sudo netstat -tulpn | grep :5900; then
-              echo "VNC port is listening!"
+          if sudo systemctl is-active --quiet xrdp; then
+              echo "XRDP Server is running!"
           else
-              echo "Checking VNC status..."
+              echo "Error: XRDP not running"
+              exit 1
           fi
 
       - name: Maintain Connection
         run: |
           echo ""
-          echo "=== VNC ACCESS ==="
-          echo "Address: ${{ env.TAILSCALE_IP }}:5900"
+          echo "=== RDP ACCESS ==="
+          echo "Address: ${{ env.TAILSCALE_IP }}"
+          echo "Port: 3389"
           echo "Username: rdp"
           echo "Password: ${{ env.RDP_PASSWORD }}"
-          echo "====================="
+          echo "===================="
           echo ""
           
           while true; do
-              echo "[$(date)] VNC Server Active"
+              echo "[$(date)] RDP Active - Use Ctrl+C in workflow to terminate"
               sleep 300
           done
