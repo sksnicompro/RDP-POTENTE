@@ -26,12 +26,29 @@ jobs:
 
       - name: Configure XRDP Server
         run: |
+          # Crear archivo de sesión para XFCE
+          sudo mkdir -p /home/rdp/.config
+          echo "xfce4-session" | sudo tee /home/rdp/.xsession > /dev/null
+          sudo chown rdp:rdp /home/rdp/.xsession
+          
+          # Configurar xrdp.ini para usar XFCE
+          sudo sed -i 's/exec_startup_sh=\/etc\/xrdp\/startwm.sh/exec_startup_sh=\/etc\/xrdp\/xfce.sh/g' /etc/xrdp/xrdp.ini
+          
+          # Crear script de inicio para XFCE
+          sudo tee /etc/xrdp/xfce.sh > /dev/null <<'EOF'
+          #!/bin/bash
+          if [ -r /etc/default/locale ]; then
+            . /etc/default/locale
+            export LANG LANGUAGE
+          fi
+          startxfce4 &
+          EOF
+          
+          sudo chmod +x /etc/xrdp/xfce.sh
+          
+          # Iniciar XRDP
           sudo systemctl start xrdp
           sudo systemctl enable xrdp
-          
-          echo "xfce4-session" > ~/.xsession
-          sudo mkdir -p /home/rdp/.config/xfce4/xfconf/xfce-perchannel-xml
-          sudo chown -R rdp:rdp /home/rdp/.config
 
       - name: Open RDP Port
         run: |
