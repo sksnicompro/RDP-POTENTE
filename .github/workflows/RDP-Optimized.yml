@@ -1,0 +1,34 @@
+name: RDP-Optimized
+
+on:
+  workflow_dispatch:
+
+jobs:
+  secure-rdp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3600
+
+    steps:
+      - name: Update System Packages & Maximize Resources
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xserver-xvfb x11vnc xfce4 xfce4-terminal dbus-x11 htop
+          
+          # Ajustar límites de memoria para maximizar
+          echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf
+          sudo sysctl -p
+          
+          # Mostrar recursos disponibles
+          echo "=== RECURSOS MAXIMIZADOS ==="
+          echo "CPU Cores: $(nproc)"
+          echo "RAM Total: $(free -h | grep Mem | awk '{print $2}')"
+          echo "RAM Disponible: $(free -h | grep Mem | awk '{print $7}')"
+          echo "Objetivo: 16GB completos"
+          echo "=============================="
+
+      - name: Create RDP User with Secure Password
+        run: |
+          # Generar contraseña segura
+          PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9!@#$%' | head -c 16)
+          
+          # Crear
