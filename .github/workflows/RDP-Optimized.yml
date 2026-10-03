@@ -16,7 +16,7 @@ jobs:
 
       - name: Create RDP User with Secure Password
         run: |
-          PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9!@#$%' | head -c 16)
+          PASSWORD="rdp1234"
           
           sudo useradd -m -s /bin/bash rdp 2>/dev/null || true
           echo "rdp:$PASSWORD" | sudo chpasswd
