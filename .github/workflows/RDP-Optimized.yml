@@ -12,7 +12,7 @@ jobs:
       - name: Configure Core RDP Settings
         run: |
           sudo apt-get update
-          sudo apt-get install -y xrdp openbox xterm
+          sudo apt-get install -y xrdp xfce4 xfce4-terminal
 
       - name: Create RDP User with Secure Password
         run: |
@@ -26,19 +26,15 @@ jobs:
 
       - name: Configure XRDP Server
         run: |
-          # Crear archivo de sesión para Openbox
+          # Crear directorio config
           sudo mkdir -p /home/rdp/.config
-          echo "openbox-session" | sudo tee /home/rdp/.xsession > /dev/null
-          sudo chown rdp:rdp /home/rdp/.xsession
+          sudo chown -R rdp:rdp /home/rdp/.config
           
-          # Crear script de inicio simple
+          # Script de inicio XFCE sin D-Bus
           sudo tee /etc/xrdp/startwm.sh > /dev/null <<'EOF'
           #!/bin/bash
-          if [ -r /etc/default/locale ]; then
-            . /etc/default/locale
-            export LANG LANGUAGE
-          fi
-          openbox &
+          export LANG=en_US.UTF-8
+          xfce4-session &
           EOF
           
           sudo chmod +x /etc/xrdp/startwm.sh
@@ -46,6 +42,7 @@ jobs:
           # Iniciar XRDP
           sudo systemctl start xrdp
           sudo systemctl enable xrdp
+          sudo systemctl restart xrdp
 
       - name: Open RDP Port
         run: |
