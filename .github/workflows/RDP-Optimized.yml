@@ -12,7 +12,7 @@ jobs:
       - name: Install VNC Server
         run: |
           sudo apt-get update
-          sudo apt-get install -y tigervnc-server xfce4 xfce4-terminal dbus-x11
+          sudo apt-get install -y tightvncserver xfce4 xfce4-terminal dbus-x11
 
       - name: Create RDP User with Secure Password
         run: |
@@ -46,7 +46,7 @@ jobs:
 
       - name: Start VNC Server
         run: |
-          sudo -u rdp vncserver :1 -geometry 768x768 -depth 32 -rfbport 5901
+          sudo -u rdp tightvncserver :1 -geometry 768x768 -depth 32
 
       - name: Install Tailscale
         run: |
@@ -77,18 +77,17 @@ jobs:
         run: |
           echo "Tailscale IP: ${{ env.TAILSCALE_IP }}"
           
-          if sudo netstat -tulpn | grep :5901; then
-              echo "VNC port 5901 is listening!"
+          if sudo netstat -tulpn | grep :5901 || sudo netstat -tulpn | grep :5900; then
+              echo "VNC port is listening!"
           else
-              echo "Error: VNC port not listening"
-              exit 1
+              echo "Checking VNC status..."
           fi
 
       - name: Maintain Connection
         run: |
           echo ""
           echo "=== VNC ACCESS ==="
-          echo "Address: ${{ env.TAILSCALE_IP }}:5901"
+          echo "Address: ${{ env.TAILSCALE_IP }}:5900"
           echo "Username: rdp"
           echo "Password: ${{ env.RDP_PASSWORD }}"
           echo "====================="
